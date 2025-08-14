@@ -1,4 +1,4 @@
-<h1>Hi, I'm Kyle! <br/> <b>Play Kaiju Battle Arena with attached game files!</b>
+<h1>Hi, I'm Kyle! <br/> <b>Play **Kaiju Battle Arena** with attached game files!</b>
 
 <h2>Note on Creation Method:</h2>
 
