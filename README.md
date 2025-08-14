@@ -5,7 +5,7 @@
 - <b>25+ Hours of AI Prompt Engineering</b>
 
   - This game, primarily AI generated, is a take on the retro Pokemon Gameboy game, focused on battle sequences, that incorporates kaiju, Godzilla-like monsters.
-  - The main purpose of this game is to pit contestants against each other by controlling kaiju with four unique abilities (an attack, buff, control, or Special move).
+  - The main purpose of this game is to pit contestants against each other by controlling kaiju with four unique abilities (an attack, buff, control, or special move).
   - A backstory and profile with player strategies is distributed to players via Google Drive link befpre the start of the tournament.
  
 <h2>Gameplay Screenshots:</h2>
