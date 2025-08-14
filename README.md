@@ -10,9 +10,13 @@
  
 <h2>Gameplay Screenshots:</h2>
 
-- <b>Intro Screen, Mid-Battle, Victory Screen r</b>
+- <b>Intro Screen</b>
 <img width="1854" height="838" alt="image" src="https://github.com/user-attachments/assets/74379299-e882-4f1e-b0d8-d9a4c95779af" />
+
+- <b>Mid-Battle</b>
 <img width="1012" height="816" alt="image" src="https://github.com/user-attachments/assets/8a16995c-0037-4db6-99af-0b5233a1ab40" />
+
+- <b>Victory Screen</b>
 <img width="1184" height="781" alt="image" src="https://github.com/user-attachments/assets/85fd825b-fea5-4076-9dfb-b1a07e8098bf" />
 
 
