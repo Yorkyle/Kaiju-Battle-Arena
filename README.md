@@ -1,4 +1,4 @@
-<h1>Hi, I'm Kyle! <br/><a href="https://www.linkedin.com/in/kyle-york-cyber/">Check out my work!</a>
+<h1>Hi, I'm Kyle! <br/><Check out my work and play it yourself by downloading the attached HTML, sound, and image files!</a>
 
 <h2>Note on Creation Method:</h2>
 
