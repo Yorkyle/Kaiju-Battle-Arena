@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Kaiju Battle Tournament</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root { --bg:#111; --fg:#fff; --muted:#bbb; --accent:#f6c90e; --panel:#1b1b1b; --line:#2a2a2a; }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+  header{padding:22px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:center;gap:12px}
+  h1{margin:0 0 8px;font-weight:800;letter-spacing:.5px}
+  p.sub{margin:0;color:var(--muted)}
+  .spacer{flex:1}
+  .topbtn{background:#3036ff;border:1px solid #aab0ff;color:#fff;padding:8px 12px;border-radius:10px;font-weight:800;cursor:pointer}
+  .topbtn:hover{filter:brightness(1.08)}
+  main{max-width:1100px;margin:0 auto;padding:18px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px}
+  .grid{display:grid;gap:12px}
+  .grid.cards{grid-template-columns:repeat(auto-fill,minmax(140px,1fr))}
+  .kaiju-card{border:1px solid var(--line);border-radius:12px;padding:10px;text-align:center;cursor:pointer;transition:.15s transform,.15s border-color}
+  .kaiju-card:hover{transform:translateY(-2px)}
+  .kaiju-card.selected{border-color:var(--accent);box-shadow:0 0 0 2px rgba(246,201,14,.25) inset}
+  .kaiju-card img{width:100%;height:140px;object-fit:contain;image-rendering:pixelated}
+  .row{display:flex;gap:16px;align-items:center;justify-content:center;flex-wrap:wrap}
+  .btn{background:#3036ff;border:1px solid #aab0ff;color:#fff;padding:10px 16px;border-radius:10px;font-weight:800;cursor:pointer}
+  .btn:hover{filter:brightness(1.08)}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+  .btn.primary{background:var(--accent);color:#000;border-color:#d4ac00}
+  .muted{color:var(--muted)}
+  .vs{font-size:13px;color:var(--muted);margin:6px 0 0}
+  .stage{display:grid;grid-template-columns:1fr .9fr 1fr;gap:16px;align-items:start}
+  .fighter{background:#161616;border:1px solid var(--line);border-radius:12px;padding:12px;text-align:center;position:relative;overflow:hidden}
+  .fighter img{width:100%;max-width:260px;height:220px;object-fit:contain;image-rendering:pixelated}
+  .name{font-weight:800;margin:6px 0 2px}
+  .hp-wrap{background:#2a2a2a;border-radius:8px;height:14px;overflow:hidden}
+  .hp{height:100%;background:linear-gradient(90deg,#1bd11b,#0aa50a);width:100%}
+  .bar-wrap{background:#2a2a2a;border-radius:8px;height:8px;overflow:hidden}
+  .cd{height:100%;background:linear-gradient(90deg,#0aa50a,#1bd11b);width:100%}
+  .cd.cooling{background:linear-gradient(90deg,#a50808,#e53b3b)}
+  .actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+  .action{background:#3036ff;border:1px solid #aab0ff;color:#ffffff;border-radius:10px;padding:12px 14px;font-size:15px;font-weight:800;cursor:pointer}
+  .action:hover{filter:brightness(1.08)}
+  .action:disabled{opacity:.45;cursor:not-allowed}
+  .log{white-space:pre-line;max-height:260px;overflow:auto;background:#0f0f0f;border:1px solid var(--line);border-radius:10px;padding:10px;font-family:ui-monospace,Consolas,monospace}
+  .round-title{text-align:center;font-weight:900;margin:8px 0 12px}
+  .next{margin-top:10px;display:flex;justify-content:center}
+  .tag{display:inline-block;padding:2px 8px;border-radius:999px;border:1px solid var(--line);font-size:12px;color:#ddd;background:#1a1a1a}
+
+  /* Bracket panel (multi-column) */
+  .bracket{background:#151515;border:1px solid var(--line);border-radius:12px;padding:12px}
+  .br-col{display:flex;gap:10px}
+  .br-round{flex:1;display:flex;flex-direction:column;gap:8px}
+  .br-rtitle{font-size:12px;color:#aaa;margin-bottom:4px}
+  .br-match{border:1px dashed #333;border-radius:10px;padding:6px}
+  .br-line{display:flex;gap:6px;margin:4px 0}
+  .br-slot{flex:1;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:8px;padding:6px 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .br-slot.win{border-color:#1fa31f;box-shadow:0 0 0 2px rgba(31,163,31,.15) inset}
+  .br-slot.current{border-color:var(--accent);box-shadow:0 0 0 2px rgba(246,201,14,.2) inset}
+  .br-slot.bye{opacity:.6;font-style:italic}
+
+  /* FX & animations */
+  .fx-layer{position:absolute;inset:0;border-radius:12px;pointer-events:none;opacity:0;transform:scale(1)}
+  .fighter.fx-aura{animation:auraPulse 800ms ease-in-out 3}
+  @keyframes auraPulse{0%{box-shadow:0 0 0 0 rgba(246,201,14,0)}25%{box-shadow:0 0 32px 6px rgba(246,201,14,.45)}50%{box-shadow:0 0 44px 10px rgba(246,201,14,.65)}100%{box-shadow:0 0 0 0 rgba(246,201,14,0)}}
+  .fx-layer.fx-hex{background:radial-gradient(ellipse at center, rgba(255,0,0,.35), rgba(255,0,0,0) 70%);animation:fxFlash 450ms ease-out 1;opacity:1}
+  .fx-layer.fx-slash-blue{background:radial-gradient(ellipse at center, rgba(0,120,255,.35), rgba(0,120,255,0) 70%);animation:fxFlash 350ms ease-out 1;opacity:1}
+  .fx-layer.fx-special-purple{background:radial-gradient(circle at 50% 50%, rgba(160,0,255,.38), rgba(160,0,255,0) 70%);animation:fxPulse 520ms ease-out 1;opacity:1}
+  .fx-layer.fx-poison{background:radial-gradient(ellipse at center, rgba(0,255,120,.35), rgba(0,255,120,0) 70%);animation:fxFlash 420ms ease-out 1;opacity:1}
+  .fighter.fx-shake{animation:shake 320ms cubic-bezier(.36,.07,.19,.97) 1}
+  @keyframes shake{10%,90%{transform:translateX(-2px)}20%,80%{transform:translateX(4px)}30%,50%,70%{transform:translateX(-6px)}40%,60%{transform:translateX(6px)}}
+  @keyframes fxFlash{0%{opacity:0;transform:scale(0.98)}30%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1.03)}}
+  @keyframes fxPulse{0%{opacity:0;transform:scale(0.9)}40%{opacity:1;transform:scale(1.02)}100%{opacity:0;transform:scale(1.06)}}
+</style>
+</head>
+<body>
+<header>
+  <div class="spacer"></div>
+  <div>
+    <h1>Kaiju Battle Tournament</h1>
+    <p class="sub">Choose six contenders. Then… <b>Let Them Fight!</b></p>
+  </div>
+  <div class="spacer" style="display:flex;justify-content:flex-end">
+    <button id="musicBtn" class="topbtn">Music: Off</button>
+  </div>
+</header>
+<main>
+  <div id="app" class="panel"></div>
+</main>
+
+<script>
+/* ------------ Audio ------------ */
+const music = new Audio('sounds/kaiju-music-loop.wav'); music.loop = true;
+const fanfare = new Audio('sounds/kaiju-victory.wav'); // final only
+let musicEnabled = false;
+const musicBtn = document.getElementById('musicBtn');
+musicBtn.addEventListener('click', ()=>{
+  musicEnabled = !musicEnabled;
+  musicBtn.textContent = `Music: ${musicEnabled ? 'On' : 'Off'}`;
+  if(musicEnabled){ try{ music.currentTime = 0; music.play(); }catch(e){} } else { music.pause(); music.currentTime=0; }
+});
+function musicPlayForBattle(){ if(musicEnabled){ try{ music.currentTime = 0; music.play(); }catch(e){} } }
+function musicStop(){ try{ music.pause(); }catch(e){} music.currentTime = 0; }
+
+/* ------------ Types hook (off for now) ------------ */
+const ENABLE_TYPE_ADV = false;
+const TYPES = { BlazeGut:'Fire', Cryoshade:'Ice', Mechavex:'Tech', RazorWraith:'Sound', StormMaw:'Electric', Abyssodon:'Water', TerraFly:'Earth', Grayskorn:'Bio', Strikorr:'Bio' };
+const TYPE_ADV = {};
+function typeBonus(aName, dName){ if(!ENABLE_TYPE_ADV) return 0; const a=TYPES[aName], d=TYPES[dName]; return (a && d && TYPE_ADV[a] && TYPE_ADV[a][d]) ? 1 : 0; }
+
+/* ------------ Roster (with your balance picks) ------------ */
+const ROSTER = [
+  { name:"BlazeGut", sprite:"BlazeGut.png", maxHP:20, moves:[
+    { name:"Flame Tusk", type:"attack", damage:4 },
+    { name:"Molten Hide", type:"buffDefense", defense:2, reflect:1, turns:1 },
+    { name:"Scorch Veil", type:"weakenNextPct", pct:0.50 },                    // 50% (was 75)
+    { name:"Flame Surge", type:"special", damage:7, cooldown:3 }
+  ]},
+  { name:"Cryoshade", sprite:"Cryoshade.png", maxHP:20, moves:[
+    { name:"Frost Claw", type:"attack", damage:4 },
+    { name:"Glacial Fortitude", type:"heal", heal:3 },
+    { name:"Icebind", type:"icebindTriDisable" }, // NEW behavior (1/3 special, 1/3 buff, 1/3 debuff)
+    { name:"Freeze Ray", type:"special", damage:6, cooldown:3 }
+  ]},
+  { name:"Mechavex", sprite:"Mechavex.png", maxHP:20, moves:[
+    { name:"Steel Slam", type:"attack", damage:4 },
+    { name:"Overclock Armor", type:"reflectCount", amount:2, count:3, costHP:1 }, // NEW cost: -1 HP
+    { name:"EMP Pulse", type:"disableRandom", turns:999 },                     // once/battle gate still applies
+    { name:"Reactor Smash", type:"special", damage:6, cooldown:3 }
+  ]},
+  { name:"RazorWraith", sprite:"RazorWraith.png", maxHP:20, moves:[
+    { name:"Echo Slash", type:"attack", damage:4 },
+    { name:"Harmonic Balance", type:"siphon", amount:2 },    // deal 2, heal 2
+    { name:"Trap Door", type:"trapPoisonDodge75", turns:3 }, // 75% dodge this turn + poison trap
+    { name:"Echo Fangs", type:"multiHitNoCrit", hits:[4,4], cooldown:3 }
+  ]},
+
+  { name:"StormMaw", sprite:"StormMaw.png", maxHP:20, moves:[
+    { name:"Thunder Bite", type:"attack", damage:4 },
+    { name:"Surge Coil", type:"healCritNext", heal:2 },
+    { name:"Lightning Lock", type:"grantPierceAttacks", count:2, selfDamage:2, cooldown:3 }, // 2 pierce (was 3)
+    { name:"Static Discharge", type:"special", damage:3, healSelf:2, cooldown:3 }
+  ]},
+  { name:"Abyssodon", sprite:"Abyssodon.png", maxHP:20, moves:[
+    { name:"Tidal Bash", type:"attack", damage:4 },
+    { name:"Deep Current", type:"healAttemptDodgeWeaken", heal:2, selfWeaken:1 }, // heal 2, 50% dodge, and -1 ATK next turn
+    { name:"Abyssal Grasp", type:"reduceDodgeFactor", factor:2 },
+    { name:"Leviathan Crush", type:"special", damage:6, cooldown:3 }
+  ]},
+  { name:"TerraFly", sprite:"TerraFly.png", maxHP:20, moves:[
+    { name:"Stone Swipe", type:"attack", damage:4 },
+    { name:"Gale Uplift", type:"healAttemptDodge", heal:2 },
+    { name:"Miasma Cloud", type:"poisonWeaken", poison:3, turns:1 },           // flags Earthsplitter nerf next turn
+    { name:"Earthsplitter", type:"special", damage:7, cooldown:3 }
+  ]},
+  { name:"Grayskorn", sprite:"Grayskorn.png", maxHP:20, moves:[
+    { name:"Primal Slam", type:"attack", damage:4 },
+    { name:"Alpha Roar", type:"disableSpecialTurns", turns:2 },                // TEMP special disable (2 turns)
+    { name:"Feral Glare", type:"suppressDefensesIncoming", count:2 },
+    { name:"Primal Fury", type:"special", damage:5, cooldown:3, unblockable:true, undodgeable:true }
+  ]},
+  { name:"Strikorr", sprite:"Strikorr.png", maxHP:20, moves:[
+    { name:"Predator Slash", type:"attack", damage:4 },
+    { name:"Ambush Predator", type:"critNext" },
+    { name:"Bone Snare", type:"suppressDefensesIncoming", count:2 },
+    { name:"Bonecrusher Bite", type:"special", damage:3, cooldown:3, stun:true } // 3 dmg + stun (was 5)
+  ]}
+];
+
+/* ------------ State helpers ------------ */
+const app = document.getElementById('app');
+const rInt = (min,max)=>Math.floor(Math.random()*(max-min+1))+min;
+const shuffle = arr => arr.map(v=>[Math.random(),v]).sort((a,b)=>a[0]-b[0]).map(x=>x[1]);
+
+function cloneFighter(k){
+  return {
+    name:k.name, sprite:k.sprite, maxHP:k.maxHP, hp:k.maxHP,
+    cd:0,
+    statuses:{
+      stun:0, poison:0, buffAtk:0, buffAtkTurns:0,
+      tempDef:0, tempDefTurns:0,
+      reflect:0, reflectTurns:0, reflectAmount:0, reflectCount:0,
+      weakenNext:0, weakenNextPct:0,
+      weakenBlockDodge:0,
+      noDefensesAttacks:0,
+      dodgeFactor:1,
+      trapPoison:0, critNext:false,
+      forceDodge:false, attemptDodge50:false, avoidAll:false,
+      enemyDodgeOff:false, specialsDisabled:false,
+      pierceAttacks:0,
+      attemptDodge75:false,
+      afterCloud:0,                 // TerraFly flag for conditional Earthsplitter
+      disableUsed:false
+
+    },
+    moves:k.moves
+  };
+}
+
+/* ------------ SELECT VIEW (with Seeding toggle) ------------ */
+function viewSelect(){
+  const cards = ROSTER.map(k=>`
+    <div class="kaiju-card" data-name="${k.name}">
+      <img src="images/${k.sprite}" alt="${k.name}" />
+      <div class="name">${k.name}</div>
+      <div class="tag">${k.moves[0].name}</div>
+    </div>
+  `).join('');
+
+  app.innerHTML = `
+    <div class="grid" style="gap:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+        <p class="muted" style="margin:0">
+          Pick exactly <b>6 kaiju</b> for the tournament, then press <b>Let Them Fight!</b>
+        </p>
+        <label class="tag" style="cursor:pointer">
+          <input type="checkbox" id="seedToggle" style="vertical-align:middle;margin-right:6px" />
+          Seeded Bracket
+        </label>
+      </div>
+      <div id="count" class="tag">Selected: 0 / 6</div>
+      <div class="grid cards" id="roster">${cards}</div>
+      <div class="row">
+        <button id="startBtn" class="btn primary" disabled>LET THEM FIGHT!</button>
+      </div>
+    </div>
+  `;
+
+  const selected = new Set();
+  document.getElementById('roster').addEventListener('click', (e)=>{
+    const card = e.target.closest('.kaiju-card'); if(!card) return;
+    const name = card.getAttribute('data-name');
+    if(selected.has(name)){ selected.delete(name); card.classList.remove('selected'); }
+    else{ if(selected.size>=6) return; selected.add(name); card.classList.add('selected'); }
+    document.getElementById('count').textContent = `Selected: ${selected.size} / 6`;
+    document.getElementById('startBtn').disabled = selected.size!==6;
+  });
+
+  document.getElementById('startBtn').addEventListener('click', ()=>{
+    const chosen = ROSTER.filter(k=>selected.has(k.name));
+    const seeded = document.getElementById('seedToggle').checked;
+    musicEnabled = true; musicBtn.textContent = 'Music: On';
+    try{ music.currentTime = 0; music.play(); }catch(e){}
+    startTournament(chosen, seeded);
+  });
+}
+
+/* ------------ BRACKET ENGINE (single-elim with byes) ------------ */
+let rounds = [];
+let roundIdx = 0;
+let matchIdx = 0;
+let currentPair = null;
+
+function seedOrder(players){ return players.slice().sort((a,b)=>a.name.localeCompare(b.name)); }
+function padToPowerOfTwo(arr){ const n=arr.length, p=1<<Math.ceil(Math.log2(Math.max(1,n))); return arr.concat(Array(p-n).fill(null)); }
+function makeRoundFromSlots(slots){ const out=[]; for(let i=0;i<slots.length;i+=2) out.push({p1:slots[i],p2:slots[i+1]||null}); return out; }
+function startTournament(selected, seeded){
+  const entrants = seeded ? seedOrder(selected) : shuffle(selected);
+  const r1Slots = padToPowerOfTwo(entrants);
+  rounds = [ makeRoundFromSlots(r1Slots) ];
+  let size = r1Slots.filter(Boolean).length;
+  while(size > 1){ size = Math.ceil(size/2); rounds.push(new Array(size).fill(0).map(_=>({p1:null,p2:null}))); }
+  roundIdx = 0; matchIdx = 0; nextMatch();
+}
+function placeWinnerIntoNextRound(winner){
+  const isFinal = (roundIdx === rounds.length-1);
+  if(isFinal) return;
+  const nextRound = rounds[roundIdx+1];
+  const slot = Math.floor(matchIdx/2);
+  const side = (matchIdx%2===0) ? 'p1' : 'p2';
+  if(!nextRound[slot][side]) nextRound[slot][side] = winner;
+}
+function nextMatch(){
+  if(matchIdx >= rounds[roundIdx].length){
+    roundIdx++; matchIdx = 0;
+    if(roundIdx >= rounds.length){ viewChampion(); return; }
+  }
+  const m = rounds[roundIdx][matchIdx];
+  if(m.p1 && !m.p2){ placeWinnerIntoNextRound(m.p1); matchIdx++; return nextMatch(); }
+  if(m.p2 && !m.p1){ placeWinnerIntoNextRound(m.p2); matchIdx++; return nextMatch(); }
+  currentPair = [cloneFighter(m.p1), cloneFighter(m.p2)];
+  viewBattle(currentPair[0], currentPair[1]);
+}
+function bracketHTML(){
+  const cols = rounds.map((round,ri)=>`
+    <div class="br-round">
+      <div class="br-rtitle">Round ${ri+1}</div>
+      ${round.map((m,mi)=>{
+        const isCur = (ri===roundIdx && mi===matchIdx && m.p1 && m.p2);
+        const win = winnerOf(ri,mi);
+        const aC=['br-slot', isCur?'current':'', win&&win.name===m.p1?.name?'win':''].join(' ').trim();
+        const bC=['br-slot', isCur?'current':'', win&&win.name===m.p2?.name?'win':''].join(' ').trim();
+        const byeA = (!m.p2 && m.p1)?' bye':'', byeB = (!m.p1 && m.p2)?' bye':'';
+        return `<div class="br-match">
+          <div class="br-line"><div class="${aC}${byeA}">${m.p1?m.p1.name:'(empty)'}</div></div>
+          <div class="br-line"><div class="${bC}${byeB}">${m.p2?m.p2.name:'(empty)'}</div></div>
+        </div>`;
+      }).join('')}
+    </div>`).join('');
+  return `<div class="bracket"><div class="br-col">${cols}</div></div>`;
+}
+function winnerOf(ri,mi){
+  if(ri >= rounds.length-1) return null;
+  const next = rounds[ri+1][Math.floor(mi/2)];
+  const side = (mi%2===0)?'p1':'p2';
+  return next[side] || null;
+}
+
+/* ------------ FX helpers ------------ */
+function fxBurst(i, cls, ms=500){ const layer=document.getElementById('fx'+i); if(!layer) return; layer.classList.remove('fx-hex','fx-slash-blue','fx-special-purple','fx-poison'); void layer.offsetWidth; layer.classList.add(cls); setTimeout(()=>layer.classList.remove(cls),ms); }
+function fxAura(i){ const c=document.getElementById('f'+i); if(!c) return; c.classList.remove('fx-aura'); void c.offsetWidth; c.classList.add('fx-aura'); setTimeout(()=>c.classList.remove('fx-aura'),900); }
+function fxShake(i){ const c=document.getElementById('f'+i); if(!c) return; c.classList.remove('fx-shake'); void c.offsetWidth; c.classList.add('fx-shake'); setTimeout(()=>c.classList.remove('fx-shake'),360); }
+function fxPoison(i){ fxBurst(i,'fx-poison',420); }
+
+/* ------------ Battle UI ------------ */
+let active = 0; let combatLog = [];
+function fighterPanel(F, idx){
+  return `
+  <div class="fighter" id="f${idx}">
+    <div class="fx-layer" id="fx${idx}"></div>
+    <img src="images/${F.sprite}" alt="${F.name}">
+    <div class="name">${F.name}</div>
+    <div class="hp-wrap"><div class="hp" id="hp${idx}"></div></div>
+    <div style="margin:6px 0"><span class="tag" id="hpv${idx}">${F.hp}/${F.maxHP} HP</span></div>
+    <div class="bar-wrap"><div class="cd" id="cd${idx}"></div></div>
+    <div class="vs"><span id="cdlbl${idx}" class="tag">Strong: Ready</span></div>
+    <div class="actions" id="acts${idx}">
+      ${F.moves.map((m,i)=>`<button class="action" data-i="${i}" data-idx="${idx}">${m.name}</button>`).join('')}
+    </div>
+    <div class="vs">${idx===active?'<b>Your turn</b>':''}</div>
+  </div>`;
+}
+function viewBattle(L,R){
+  active = 0; combatLog = []; musicPlayForBattle();
+  app.innerHTML = `
+    <div class="round-title">Round ${roundIdx+1} — Match ${matchIdx+1}</div>
+    <div class="stage">
+      ${fighterPanel(L,0)} ${bracketHTML()} ${fighterPanel(R,1)}
+    </div>
+    <div class="panel" style="margin-top:12px"><div class="log" id="log"></div></div>
+    <div class="next" id="between" style="display:none">
+      <button class="btn primary" id="nextMatchBtn">Next Match</button>
+    </div>`;
+  document.getElementById('log').textContent = `Battle start: ${L.name} vs ${R.name}`;
+  updateUI(L,R); startTurn(L,R);
+}
+function refreshBracket(){ const b=document.querySelector('.stage'); if(b){ b.children[1].outerHTML = bracketHTML(); } }
+
+function updateUI(L,R){
+  const fighters=[L,R];
+  fighters.forEach((F,i)=>{
+    const hpPct=Math.max(0,(F.hp/F.maxHP)*100);
+    const hp=document.getElementById('hp'+i), hpv=document.getElementById('hpv'+i);
+    if(hp) hp.style.width=hpPct+'%'; if(hpv) hpv.textContent=`${Math.max(0,F.hp)}/${F.maxHP} HP`;
+    const cdBar=document.getElementById('cd'+i), cdLbl=document.getElementById('cdlbl'+i);
+    const m=F.moves[3], cd=F.cd||0; let pct=100;
+    if(m && m.cooldown){ pct = cd===0 ? 100 : ((m.cooldown-cd)/m.cooldown)*100; }
+    if(cdBar){ cdBar.classList.toggle('cooling', cd>0); cdBar.style.width=pct+'%'; }
+    if(cdLbl){ cdLbl.textContent = cd===0 ? 'Strong: Ready' : `Strong: ${cd} turn(s)`; }
+
+    const acts=document.getElementById('acts'+i);
+    if(acts){
+      [...acts.querySelectorAll('button')].forEach(btn=>{
+        const mv=F.moves[Number(btn.getAttribute('data-i'))]; let disabled=false;
+        if(i!==active) disabled=true;
+        if(F.statuses.stun>0) disabled=true;
+        if(mv.type==="special"){ if(F.cd>0) disabled=true; if(F.statuses.specialsDisabled) disabled=true; }
+        if(mv._locked && mv._locked>0) disabled=true;
+        if(mv._cd && mv._cd>0) disabled=true;
+        const isDisableType = mv.type === 'disableRandom'
+          || mv.type === 'disableNonBasicRandom'
+          || mv.type === 'disableSpecial'
+          || mv.type === 'disableSpecialTurns'
+          || mv.type === 'disableEnemySpecialNext'
+          || mv.type === 'disableEnemySpecialPermanent'
+  	  || mv.type === 'icebindTriDisable';
+        if(isDisableType && F.statuses.disableUsed) disabled = true;
+        btn.disabled=disabled;
+      });
+    }
+  });
+
+  [0,1].forEach(i=>{
+    const acts=document.getElementById('acts'+i); if(!acts) return;
+    acts.querySelectorAll('button').forEach(btn=>{
+      btn.onclick=()=>takeAction(Number(btn.getAttribute('data-idx')), Number(btn.getAttribute('data-i')));
+    });
+  });
+}
+
+function startTurn(L,R){
+  let safety=2;
+  while(safety-- > 0){
+    const A=active===0?L:R;
+    if(A.statuses.stun>0){
+      logLine(`${A.name} is stunned and misses the turn!`);
+      A.statuses.stun=Math.max(0,A.statuses.stun-1);
+      active=active===0?1:0;
+    } else break;
+  }
+  updateUI(L,R);
+}
+
+function takeAction(idx, moveIndex){
+  const L=currentPair[0], R=currentPair[1];
+  const A=active===0?L:R, D=active===0?R:L;
+  const move=A.moves[moveIndex];
+  if(A.statuses.stun>0){ logLine(`${A.name} is stunned and misses the turn!`); A.statuses.stun--; endTurn(L,R); return; }
+  if(move._locked && move._locked>0){ logLine(`${A.name}'s "${move.name}" is disabled this turn!`); endTurn(L,R); return; }
+  resolveMove(A,D,move,L,R); endTurn(L,R);
+}
+
+function endTurn(L,R){
+  active = active===0?1:0;
+  if(active===0){
+    [L,R].forEach(F=>{
+      if(F.statuses.poison>0){ F.hp -= 1; F.statuses.poison -= 1; logLine(`${F.name} takes 1 poison damage.`); const idx=(F===currentPair[0])?0:1; fxPoison(idx); }
+      if(F.statuses.tempDefTurns>0){ F.statuses.tempDefTurns--; if(F.statuses.tempDefTurns===0) F.statuses.tempDef=0; }
+      if(F.statuses.reflectTurns>0){ F.statuses.reflectTurns--; if(F.statuses.reflectTurns===0) F.statuses.reflect=0; }
+      if(F.cd>0) F.cd--;
+      if(F.statuses.buffAtkTurns>0){ F.statuses.buffAtkTurns--; if(F.statuses.buffAtkTurns===0) F.statuses.buffAtk=0; }
+      if(F.statuses.weakenBlockDodge>0) F.statuses.weakenBlockDodge--;
+      if(F.statuses.afterCloud>0) F.statuses.afterCloud--;       // TerraFly window decays
+      F.statuses.forceDodge=false; F.statuses.attemptDodge50=false; F.statuses.attemptDodge75=false; F.statuses.avoidAll=false;
+      F.moves.forEach(m=>{ if(m._locked && m._locked>0) m._locked--; });
+      F.moves.forEach(m=>{ if(m._cd && m._cd>0) m._cd--; });
+    });
+  }
+  const w=checkWinner(L,R);
+  if(w){
+    logLine(`🏆 ${w.name} wins the match!`);
+    musicStop();
+    placeWinnerIntoNextRound(ROSTER.find(k=>k.name===w.name));
+    const between=document.getElementById('between'); between.style.display='flex';
+    document.getElementById('nextMatchBtn').onclick=()=>{ matchIdx++; refreshBracket(); nextMatch(); };
+    refreshBracket();
+    return;
+  }
+  refreshBracket();
+  updateUI(L,R); startTurn(L,R);
+}
+
+/* ------------ Mechanics ------------ */
+function resolveMove(A,D,move,L,R){
+  const name=move.name;
+  switch(move.type){
+
+    case 'attack': {
+      let dmg = applyAttackModifiers(A,D,move.damage);
+      if(applyDefenseChecks(A,D,{unblockable:false,undodgeable:false})===false) break;
+      fxBurst(active===0?1:0, 'fx-slash-blue', 380);
+      dealDamage(D,dmg,A); break;
+    }
+
+    case 'heal': {
+      A.hp = Math.min(A.maxHP, A.hp + (move.heal||0));
+      logLine(`${A.name} used ${name} and healed ${move.heal||0} HP.`); fxAura(active); break;
+    }
+
+    case 'buffDefense': {
+      A.statuses.tempDef = move.defense||0; A.statuses.tempDefTurns = move.turns||1;
+      A.statuses.reflect = move.reflect||0;  A.statuses.reflectTurns = move.turns||1;
+      logLine(`${A.name} used ${name}: +${move.defense||0} defense ${move.turns||1} turn, reflect ${move.reflect||0}.`); fxAura(active); break;
+    }
+
+    case 'weakenNextPct': {
+      D.statuses.weakenNextPct = Math.max(D.statuses.weakenNextPct, move.pct||0.75);
+      logLine(`${A.name} used ${name}: ${D.name}'s next attack reduced by ${(100*(move.pct||0.75))|0}%`); fxBurst(active===0?1:0,'fx-hex',450); break;
+    }
+
+    /* ---- DISABLES ---- */
+    case 'disableRandom': {
+      if (A.statuses.disableUsed) { logLine(`${A.name} has already used a disable move this battle.`); break; }
+      const idxs=[1,2,3].filter(i=>D.moves[i]);
+      if(idxs.length){ const i=rInt(0,idxs.length-1);
+        const mi=idxs[i]; D.moves[mi]._locked=(D.moves[mi]._locked||0)+(move.turns||1);
+        A.statuses.disableUsed = true; logLine(`${A.name} used ${name}: ${D.name}'s "${D.moves[mi].name}" is disabled.`); fxBurst(active===0?1:0,'fx-hex',450);
+      } else logLine(`${A.name} used ${name}, but nothing to disable.`);
+      break;
+    }
+    case 'disableSpecial': { // (permanent – still used by some kits)
+      if (A.statuses.disableUsed) { logLine(`${A.name} has already used a disable move this battle.`); break; }
+      D.statuses.specialsDisabled = true; A.statuses.disableUsed = true;
+      logLine(`${A.name} used ${name}: ${D.name}'s special is disabled for the rest of battle.`); fxBurst(active===0?1:0,'fx-hex',450); break;
+    }
+    case 'disableSpecialTurns': { // NEW: lock enemy special for N turns
+      if (A.statuses.disableUsed) { logLine(`${A.name} has already used a disable move this battle.`); break; }
+      const specIdx=3; if(D.moves[specIdx]){ D.moves[specIdx]._locked=(D.moves[specIdx]._locked||0)+(move.turns||2); A.statuses.disableUsed=true; }
+      logLine(`${A.name} used ${name}: ${D.name}'s special is disabled for ${move.turns||2} turn(s)!`); fxBurst(active===0?1:0,'fx-hex',450); break;
+    }
+    case 'disableEnemySpecialPermanent': {
+      if (A.statuses.disableUsed) { logLine(`${A.name} has already used a disable move this battle.`); break; }
+      D.statuses.specialsDisabled = true; A.statuses.disableUsed = true;
+      logLine(`${A.name} used ${name}: ${D.name}'s special is disabled for the rest of the fight!`); fxBurst(active===0?1:0,'fx-hex',450); break;
+    }
+    /* ---- end DISABLES ---- */
+
+    case 'special': {
+      // TerraFly conditional Earthsplitter (6 if Cloud last turn)
+      let base = move.damage||0;
+      if(A.name==="TerraFly" && name==="Earthsplitter" && A.statuses.afterCloud>0){ base = Math.min(base,6); }
+      if(A.cd>0){ logLine(`${A.name} tried ${name} but it's on cooldown.`); break; }
+      let dmg = applyAttackModifiers(A,D,base, true);
+      const flags = {unblockable: !!move.unblockable, undodgeable: !!move.undodgeable};
+      fxBurst(active===0?1:0,'fx-special-purple',520);
+      if(applyDefenseChecks(A,D,flags)===false) { A.cd = move.cooldown||0; break; }
+      dealDamage(D,dmg,A);
+      if(move.stun){ D.statuses.stun = Math.max(D.statuses.stun,1); logLine(`${D.name} is stunned!`); }
+      if(move.healSelf){ A.hp = Math.min(A.maxHP, A.hp + move.healSelf); logLine(`${A.name} heals ${move.healSelf} HP.`); fxAura(active); }
+      A.cd = move.cooldown||0; break;
+    }
+
+    case 'multiHitNoCrit': {
+      if (move.cooldown && move._cd > 0) { logLine(`${A.name} tried ${name} but it's on cooldown (${move._cd} turn(s) left).`); break; }
+      const hits = move.hits || [4,4];
+      for (const base of hits) {
+        let dmg = calcDamageNoCrit(A,D,base);
+        if(applyDefenseChecks(A,D,{unblockable:false,undodgeable:false})===false) continue;
+        fxBurst(active===0?1:0,'fx-slash-blue',300);
+        dealDamage(D,dmg,A);
+      }
+      if (move.cooldown) move._cd = move.cooldown; break;
+    }
+
+    case 'buffAtk': {
+      A.statuses.buffAtk = (A.statuses.buffAtk||0) + (move.amount||1);
+      A.statuses.buffAtkTurns = Math.max(A.statuses.buffAtkTurns, move.turns||2);
+      logLine(`${A.name} used ${name}: +${move.amount||1} attack for ${move.turns||2} turns.`); fxAura(active); break;
+    }
+
+    case 'trapPoison': {
+      A.statuses.trapPoison = move.turns||3;
+      logLine(`${A.name} set ${name}: if next attack lands, poison for ${move.turns||3} turns.`); fxAura(active); break;
+    }
+
+    case 'healAttemptDodge': {
+      A.hp = Math.min(A.maxHP, A.hp + (move.heal||0)); A.statuses.attemptDodge50 = true;
+      logLine(`${A.name} used ${name}: healed ${move.heal||0} and has a 50% chance to dodge this turn.`); fxAura(active); break;
+    }
+
+    case 'healAttemptDodgeWeaken': { // Abyssodon Deep Current: heal + 50% dodge + self -1 atk next turn
+      A.hp = Math.min(A.maxHP, A.hp + (move.heal||0)); A.statuses.attemptDodge50 = true;
+      A.statuses.weakenNext = Math.max(A.statuses.weakenNext, move.selfWeaken||1);
+      logLine(`${A.name} used ${name}: healed ${move.heal||0}, 50% dodge this turn, but -${move.selfWeaken||1} ATK next attack.`); fxAura(active); break;
+    }
+
+    case 'reflectCount': { // Mechavex Overclock Armor with cost
+      A.statuses.reflectAmount = move.amount||2; A.statuses.reflectCount = move.count||3;
+      if(move.costHP){ A.hp -= move.costHP; logLine(`${A.name} strains systems and takes ${move.costHP} self-damage.`); }
+      logLine(`${A.name} used ${name}: will reflect ${A.statuses.reflectAmount} on next ${A.statuses.reflectCount} hit(s).`); fxAura(active); break;
+    }
+
+    case 'grantPierceAttacks': {
+      if(A.cd>0){ logLine(`${A.name} tried ${name} but it's on cooldown.`); break; }
+      A.statuses.pierceAttacks = (A.statuses.pierceAttacks||0) + (move.count||3);
+      A.hp -= (move.selfDamage||2);
+      logLine(`${A.name} used ${name}: next ${move.count||3} attack(s) are UNBLOCKABLE & UNDODGEABLE. ${A.name} takes ${move.selfDamage||2} recoil.`); fxAura(active); A.cd = move.cooldown||0; break;
+    }
+
+    case 'reduceDodgeFactor': {
+      D.statuses.dodgeFactor = Math.max(D.statuses.dodgeFactor||1, move.factor||2);
+      logLine(`${A.name} used ${name}: ${D.name}'s dodge chance is reduced for the rest of the fight.`); fxBurst(active===0?1:0,'fx-hex',450); break;
+    }
+
+    case 'critNext': { A.statuses.critNext = true; logLine(`${A.name} used ${name}: next attack will be a guaranteed critical!`); fxAura(active); break; }
+
+    case 'healCritNext': { A.hp = Math.min(A.maxHP, A.hp + (move.heal||0)); A.statuses.critNext = true; logLine(`${A.name} used ${name}: healed ${move.heal||0} and GUARANTEED CRIT on next attack.`); fxAura(active); break; }
+
+    case 'poisonWeaken': {
+      D.statuses.poison = Math.max(D.statuses.poison,  move.poison||3);
+      D.statuses.weakenBlockDodge = move.turns||1;
+      if(A.name==="TerraFly"){ A.statuses.afterCloud = 1; } // sets Earthsplitter nerf window
+      logLine(`${A.name} used ${name}: ${D.name} is poisoned (${move.poison||3}) and defenses are weakened next turn.`); fxBurst(active===0?1:0,'fx-hex',450); break;
+    }
+
+    case 'siphon': {
+      // Harmonic Balance — deal N and heal N (unblockable/undodgeable by design)
+      const n = move.amount || 2;
+      D.hp -= n;
+      A.hp = Math.min(A.maxHP, A.hp + n);
+      logLine(`${A.name} used ${move.name}: drains ${n} HP and heals ${n}!`);
+      fxBurst(active===0?1:0,'fx-special-purple',520); fxAura(active);
+      break;
+    }
+
+    case 'trapPoisonDodge75': {
+      // Trap Door — 75% dodge this turn + set poison trap for next successful attack
+      A.statuses.trapPoison = move.turns || 3;
+      A.statuses.attemptDodge75 = true;
+      logLine(`${A.name} set ${move.name}: 75% dodge this turn; next successful attack will POISON for ${move.turns||3} turns.`);
+      fxAura(active);
+      break;
+    }
+
+    case 'icebindTriDisable': {
+      // Cryoshade’s Icebind — 1/3: disable special permanently, 1/3: disable a buff, 1/3: disable a debuff
+      // Reuse "disable once per battle" guard so it can't stack with other disables from the same attacker.
+      if (A.statuses.disableUsed) { logLine(`${A.name} has already used a disabling move this battle.`); break; }
+
+      const choice = ['special','buff','debuff'][rInt(0,2)];
+      let targetIdx = null;
+
+      if (choice === 'special') {
+        // permanent special disable flag
+        D.statuses.specialsDisabled = true;
+        logLine(`${A.name} used Icebind: ${D.name}'s SPECIAL is disabled for the rest of the fight!`);
+        A.statuses.disableUsed = true;
+        fxBurst(active===0?1:0,'fx-hex',450);
+        break;
+      }
+
+      // helpers to classify enemy moves (skip basic attack at index 0)
+      const isBuff = (t)=>['heal','buffAtk','buffDefense','healCritNext','reflectCount','grantPierceAttacks','healAttemptDodge','healAttemptDodgeWeaken'].includes(t);
+      const isDebuff = (t)=>[
+        'weakenNextPct','trapPoison','trapPoisonDodge75','reduceDodgeFactor','suppressDefensesIncoming',
+        'disableRandom','disableNonBasicRandom','disableSpecial','disableSpecialTurns','disableEnemySpecialNext','disableEnemySpecialPermanent','poisonWeaken'
+      ].includes(t);
+
+      if (choice === 'buff') {
+        for (let i=1;i<Math.min(3,D.moves.length);i++){
+          if (isBuff(D.moves[i]?.type)) { targetIdx = i; break; }
+        }
+      } else { // 'debuff'
+        for (let i=1;i<Math.min(3,D.moves.length);i++){
+          if (isDebuff(D.moves[i]?.type)) { targetIdx = i; break; }
+        }
+      }
+
+      if (targetIdx==null) {
+        // fallback to special if category not found
+        D.statuses.specialsDisabled = true;
+        logLine(`${A.name} used Icebind: fallback — ${D.name}'s SPECIAL is disabled for the rest of the fight!`);
+      } else {
+        D.moves[targetIdx]._locked = 999; // effectively permanent
+        logLine(`${A.name} used Icebind: ${D.name}'s "${D.moves[targetIdx].name}" is disabled for the rest of the fight!`);
+      }
+      A.statuses.disableUsed = true;
+      fxBurst(active===0?1:0,'fx-hex',450);
+      break;
+    }
+
+    case 'suppressDefensesIncoming': {
+      D.statuses.noDefensesAttacks = Math.max(D.statuses.noDefensesAttacks, move.count||2);
+      logLine(`${A.name} used ${name}: ${D.name} cannot BLOCK or DODGE for the next ${move.count||2} incoming attack(s)!`); fxBurst(active===0?1:0,'fx-hex',450); break;
+    }
+
+    default: logLine(`${A.name} hesitates... (no effect)`);
+  }
+  updateUI(L,R);
+}
+
+function applyAttackModifiers(A,D,base,isSpecial=false){
+  let dmg = base;
+  dmg += typeBonus(A.name, D.name);
+  let crit=false;
+  if(A.statuses.critNext){ crit=true; A.statuses.critNext=false; }
+  if(!crit && rInt(1,6)===6){ crit=true; }
+  if(crit){ dmg += 2; logLine(`CRITICAL HIT! (+2)`); }
+  if(A.statuses.buffAtk>0) dmg += A.statuses.buffAtk;
+  if(A.statuses.weakenNext>0){ dmg = Math.max(0, dmg - A.statuses.weakenNext); logLine(`${A.name}'s attack is weakened by ${A.statuses.weakenNext}.`); A.statuses.weakenNext = 0; }
+  if(A.statuses.weakenNextPct>0){ const pct=A.statuses.weakenNextPct; dmg = Math.floor(dmg*(1-pct)); logLine(`${A.name}'s attack power reduced by ${(pct*100)|0}%!`); A.statuses.weakenNextPct=0; }
+  if(D.statuses.tempDef>0){ dmg = Math.max(0, dmg - D.statuses.tempDef); }
+  return Math.max(0,dmg);
+}
+function calcDamageNoCrit(A,D,base){
+  let dmg = base;
+  dmg += typeBonus(A.name, D.name);
+  if(A.statuses.buffAtk>0) dmg += A.statuses.buffAtk;
+  if(A.statuses.weakenNext>0){ dmg = Math.max(0, dmg - A.statuses.weakenNext); logLine(`${A.name}'s attack is weakened by ${A.statuses.weakenNext}.`); A.statuses.weakenNext = 0; }
+  if(A.statuses.weakenNextPct>0){ const pct=A.statuses.weakenNextPct; dmg = Math.floor(dmg*(1-pct)); logLine(`${A.name}'s attack power reduced by ${(pct*100)|0}%!`); A.statuses.weakenNextPct=0; }
+  if(D.statuses.tempDef>0){ dmg = Math.max(0, dmg - D.statuses.tempDef); }
+  return Math.max(0,dmg);
+}
+function applyDefenseChecks(A,D,flags){
+  if(D.statuses.noDefensesAttacks>0){ D.statuses.noDefensesAttacks--; logLine(`${D.name}'s defenses are suppressed — no BLOCK or DODGE!`); return true; }
+  if(A.statuses.pierceAttacks>0){ A.statuses.pierceAttacks--; logLine(`${A.name}'s attack pierces through all defenses!`); return true; }
+  if(D.statuses.avoidAll){ logLine(`${D.name} avoids all damage this turn!`); return false; }
+  if (D.statuses.attemptDodge75) {
+    if (Math.random() < 0.75) { 
+	logLine(`${D.name} vanishes into a Trap Door (75% dodge)!`); 
+	return false; 
+      } 
+  }  
+  if(D.statuses.attemptDodge50){ if(Math.random()<0.5){ logLine(`${D.name} slips away (50% dodge)!`); return false; } }
+  if(D.statuses.forceDodge){ logLine(`${D.name} nimbly dodges the strike!`); return false; }
+  const defensesWeakened = D.statuses.weakenBlockDodge>0;
+  if(!flags.unblockable && !defensesWeakened){ if(rInt(1,6)===1){ logLine(`${D.name} BLOCKS the attack!`); return false; } }
+  if(!flags.undodgeable && !D.statuses.enemyDodgeOff && !defensesWeakened){
+    const denom = 6*(D.statuses.dodgeFactor||1);
+    if(rInt(1,denom)===2){ logLine(`${D.name} DODGES the attack!`); return false; }
+  }
+  return true;
+}
+function dealDamage(target, dmg, attacker){
+  if(dmg<=0){ logLine(`No damage dealt.`); return; }
+  target.hp -= dmg; logLine(`${attacker.name} deals ${dmg} damage to ${target.name}.`);
+  fxShake(attacker === currentPair[0] ? 1 : 0);
+  if(target.statuses.reflect>0 && target.statuses.reflectTurns>0){ attacker.hp -= target.statuses.reflect; logLine(`${attacker.name} takes ${target.statuses.reflect} reflect damage!`); }
+  if(target.statuses.reflectAmount>0 && target.statuses.reflectCount>0){
+    attacker.hp -= target.statuses.reflectAmount; target.statuses.reflectCount--;
+    logLine(`${attacker.name} takes ${target.statuses.reflectAmount} reflect damage! (${target.statuses.reflectCount} reflect(s) left)`); if(target.statuses.reflectCount<=0) target.statuses.reflectAmount=0;
+  }
+  if(attacker.statuses.trapPoison>0){ target.statuses.poison = Math.max(target.statuses.poison, attacker.statuses.trapPoison); attacker.statuses.trapPoison = 0; logLine(`${target.name} is POISONED!`); }
+}
+function logLine(s){ const el=document.getElementById('log'); if(!el) return; el.textContent = (el.textContent?el.textContent+'\n':'') + s; el.scrollTop = el.scrollHeight; }
+function checkWinner(L,R){
+  if(L.hp<=0 && R.hp<=0){ logLine(`Both kaiju fall! Judge decides...`); return (rInt(0,1)===0)?L:R; }
+  if(L.hp<=0) return R; if(R.hp<=0) return L; return null;
+}
+
+/* ------------ Champion ------------ */
+function viewChampion(){
+  const champ = rounds[rounds.length-1][0].p1 || rounds[rounds.length-1][0].p2;
+  musicStop(); try{ fanfare.currentTime=0; fanfare.play(); }catch(e){}
+  app.innerHTML = `
+    <div class="panel" style="text-align:center">
+      <h2>🏆 Champion: ${champ?.name || 'Champion'}!</h2>
+      ${champ ? `<img src="images/${champ.sprite}" alt="${champ.name}" style="height:240px;image-rendering:pixelated" />` : ''}
+      <div class="row" style="margin-top:16px"><button class="btn" onclick="location.reload()">Run Another Tournament</button></div>
+    </div>`;
+}
+
+/* ------------ Boot ------------ */
+viewSelect();
+</script>
+</body>
+</html>
