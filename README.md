@@ -1,4 +1,4 @@
-<h1>Hi, I'm Kyle! <br/><Check out my work and play it yourself by downloading the attached HTML, sound, and image files!</a>
+<h1>Hi, I'm Kyle! <br/> <b>Play Kaiju Battle Arena with attached game files!</b>
 
 <h2>Note on Creation Method:</h2>
 
