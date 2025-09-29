@@ -1,0 +1,7 @@
+[build]
+  publish = "Kaiju-Battle-Arena-Game-KY"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
